@@ -166,9 +166,7 @@ export default class CameraScreenBase extends Component {
             source={this.props.captureButtonImage}
             resizeMode={'contain'}
           >
-            <Text style={styles.captureNumber}>
-              {this.numberOfImagesTaken()}
-            </Text>
+    
           </Image>
         </TouchableOpacity>
       </View >
@@ -264,8 +262,7 @@ export default class CameraScreenBase extends Component {
 
   async onCaptureImagePressed() {
     const shouldSaveToCameraRoll = !this.props.allowCaptureRetake;
-    const image = await this.camera.capture(shouldSaveToCameraRoll);
-
+    const image = await this.camera.capture(false);
     if (this.props.allowCaptureRetake) {
       this.setState({ imageCaptured: image });
     } else {
