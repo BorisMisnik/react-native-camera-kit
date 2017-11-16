@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
   Image,
   NativeModules,
-  Platform
+  Platform,
+  Dimensions,
 } from 'react-native';
 import _ from 'lodash';
 import CameraKitCamera from './../CameraKitCamera';
@@ -126,14 +127,19 @@ export default class CameraScreenBase extends Component {
   }
 
   renderCamera() {
+    const dimension = Dimensions.get('window');
     return (
       <View style={styles.cameraContainer}>
         {
           this.isCaptureRetakeMode() ?
-          <Image
-            style={{flex: 1, justifyContent: 'flex-end'}}
-            source={{uri: this.state.imageCaptured.uri}}
-          /> :
+          <View style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
+            <Image
+              style={{width: dimension.width * 0.9, height: dimension.width * 0.9}}
+              source={{uri: this.state.imageCaptured.uri}}
+              resizeMode={'cover'}
+            /> 
+          </View>
+          :
           <CameraKitCamera
             ref={(cam) => this.camera = cam}
             style={{flex: 1, justifyContent: 'flex-end'}}
@@ -205,9 +211,10 @@ export default class CameraScreenBase extends Component {
         this.setState({imageCaptured: undefined});
       }
       else if(type === 'right') {
-        const result = await GalleryManager.saveImageURLToCameraRoll(this.state.imageCaptured.uri);
-        const savedImage = {...this.state.imageCaptured, ...result}; // Note: Can't just return 'result' as on iOS not all data is returned by the native call (just the ID).
-        this.setState({imageCaptured: undefined, captureImages: _.concat(this.state.captureImages, savedImage)}, () => {
+        // const result = await GalleryManager.saveImageURLToCameraRoll(this.state.imageCaptured.uri);
+        // const savedImage = {...this.state.imageCaptured, ...result}; // Note: Can't just return 'result' as on iOS not all data is returned by the native call (just the ID).
+        // console.log(savedImage);
+        this.setState({captureImages: [this.state.imageCaptured]}, () => {
           this.sendBottomButtonPressedAction(type, captureRetakeMode);
         });
       }
@@ -221,9 +228,14 @@ export default class CameraScreenBase extends Component {
     if (type === 'right') {
       showButton = this.state.captureImages.length || this.isCaptureRetakeMode();
     }
-    if (showButton) {
+    // if (showButton) {
       const buttonNameSuffix = this.isCaptureRetakeMode() ? 'CaptureRetakeButtonText' : 'ButtonText';
-      const buttonText = _(this.props).get(`actions.${type}${buttonNameSuffix}`)
+      let buttonText = _(this.props).get(`actions.${type}${buttonNameSuffix}`)
+      if (this.isCaptureRetakeMode() && type === 'left') {
+        buttonText = 'Retake';
+      } else if (this.isCaptureRetakeMode() && type === 'right') {
+        buttonText = 'Done';
+      }
       return (
         <TouchableOpacity
           style={[styles.bottomButton, { justifyContent: type === 'left' ? 'flex-start' : 'flex-end' }]}
@@ -232,16 +244,12 @@ export default class CameraScreenBase extends Component {
           <Text style={styles.textStyle}>{buttonText}</Text>
         </TouchableOpacity>
       );
-    } else {
-      return (
-        <View style={styles.bottomContainerGap} />
-      );
-    }
+    // }
   }
 
   renderBottomButtons() {
     return (
-      <View style={[styles.bottomButtons, {backgroundColor: '#ffffff00'}]}>
+      <View style={[styles.bottomButtons, {backgroundColor: '#ffffff00', zIndex: 3}]}>
         {this.renderBottomButton('left')}
         {this.renderCaptureButton()}
         {this.renderBottomButton('right')}
@@ -263,8 +271,9 @@ export default class CameraScreenBase extends Component {
   async onCaptureImagePressed() {
     const shouldSaveToCameraRoll = !this.props.allowCaptureRetake;
     const image = await this.camera.capture(false);
+
     if (this.props.allowCaptureRetake) {
-      this.setState({ imageCaptured: image });
+      this.setState({ captured: true, imageCaptured: image, captureImages: _.concat(this.state.captureImages, image) });
     } else {
       if (image) {
         this.setState({ captured: true, imageCaptured: image, captureImages: _.concat(this.state.captureImages, image) });
